@@ -114,7 +114,6 @@ vvsfs_writeblock(struct super_block *sb, int inum, struct vvsfs_inode *inode) {
 
 static int
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
-// vvsfs_readdir - reads a directory and places the result using filldir
 vvsfs_readdir(struct file *filp, void *dirent, filldir_t filldir)
 #else
 vvsfs_readdir(struct file *filp, struct dir_context *ctx)
@@ -238,13 +237,20 @@ struct inode * vvsfs_new_inode(const struct inode * dir, umode_t mode)
   
   block.is_empty = false;
   block.size = 0;
-  block.is_directory = false;
+  if(S_ISDIR(mode)){
+      printk("vvsfs - NEW DIRECTORY!\n");
+      block.is_directory = true;
+  } else {
+      block.is_directory = false;
+  }
   
   vvsfs_writeblock(sb,newinodenumber,&block);
   
   inode_init_owner(inode, dir, mode);
   inode->i_ino = newinodenumber;
   inode->i_ctime = inode->i_mtime = inode->i_atime = CURRENT_TIME;
+
+  /*printk("vvsfs - inode mode:%d\n", inode->i_mode & S_IFDIR);*/
    
   inode->i_op = NULL;
   
@@ -253,9 +259,11 @@ struct inode * vvsfs_new_inode(const struct inode * dir, umode_t mode)
   return inode;
 }
 
-// vvsfs_create - create a new file in a directory 
+static struct inode_operations vvsfs_dir_inode_operations;
+static struct file_operations vvsfs_dir_operations;
+
 static int
-vvsfs_create(struct inode *dir, struct dentry* dentry, umode_t mode, bool excl)
+vvsfs_mknod(struct inode *dir, struct dentry* dentry, umode_t mode)
 {
   struct vvsfs_inode dirdata;
   int num_dirs;
@@ -265,11 +273,17 @@ vvsfs_create(struct inode *dir, struct dentry* dentry, umode_t mode, bool excl)
 
   if (DEBUG) printk("vvsfs - create : %s\n",dentry->d_name.name);
 
-  inode = vvsfs_new_inode(dir, S_IRUGO|S_IWUGO|S_IFREG);
+  inode = vvsfs_new_inode(dir,mode);
   if (!inode)
     return -ENOSPC;
-  inode->i_op = &vvsfs_file_inode_operations;
-  inode->i_fop = &vvsfs_file_operations;
+
+  if(S_ISDIR(mode)){
+      inode->i_op = &vvsfs_dir_inode_operations;
+      inode->i_fop = &vvsfs_dir_operations;
+  } else {
+      inode->i_op = &vvsfs_file_inode_operations;
+      inode->i_fop = &vvsfs_file_operations;
+  }
   inode->i_mode = mode;
 
   /* get an vfs inode */
@@ -292,9 +306,28 @@ vvsfs_create(struct inode *dir, struct dentry* dentry, umode_t mode, bool excl)
   vvsfs_writeblock(dir->i_sb,dir->i_ino,&dirdata);
 
   d_instantiate(dentry, inode);
+  dget(dentry);
 
-  printk("File created %ld\n",inode->i_ino);
+  printk("Node created %ld\n",inode->i_ino);
+
+  //FIXME
+  //update_atime(dir);
+
   return 0;
+}
+
+// vvsfs_create - create a new file in a directory 
+static int
+vvsfs_create(struct inode *dir, struct dentry* dentry, umode_t mode, bool excl)
+{
+    return vvsfs_mknod(dir,dentry,S_IRUGO|S_IWUGO|S_IFREG);
+}
+
+
+static int 
+vvsfs_mkdir(struct inode * dir,struct dentry * dentry, umode_t mode)
+{
+    return vvsfs_mknod(dir,dentry,S_IRUGO|S_IWUGO|S_IXUGO|S_IFDIR);
 }
 
 // vvsfs_file_write - write to a file
@@ -428,6 +461,7 @@ static struct file_operations vvsfs_dir_operations = {
 static struct inode_operations vvsfs_dir_inode_operations = {
    create:     vvsfs_create,                   /* create */
    lookup:     vvsfs_lookup,           /* lookup */
+   mkdir:      vvsfs_mkdir,         /* mkdir */
 };
 
 // vvsfs_iget - get the inode from the super block

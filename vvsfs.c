@@ -290,6 +290,7 @@ vvsfs_mknod(struct inode *dir, struct dentry* dentry, umode_t mode)
   if (!dir) return -1;
 
   vvsfs_readblock(dir->i_sb,dir->i_ino,&dirdata);
+
   num_dirs = dirdata.size/sizeof(struct vvsfs_dir_entry);
   dent = (struct vvsfs_dir_entry *) ((dirdata.data) + num_dirs*sizeof(struct vvsfs_dir_entry));
 
@@ -298,10 +299,8 @@ vvsfs_mknod(struct inode *dir, struct dentry* dentry, umode_t mode)
   
 
   dirdata.size = (num_dirs + 1) * sizeof(struct vvsfs_dir_entry);
- 
 
   dent->inode_number = inode->i_ino;
-
   
   vvsfs_writeblock(dir->i_sb,dir->i_ino,&dirdata);
 
@@ -328,6 +327,40 @@ static int
 vvsfs_mkdir(struct inode * dir,struct dentry * dentry, umode_t mode)
 {
     return vvsfs_mknod(dir,dentry,S_IRUGO|S_IWUGO|S_IXUGO|S_IFDIR);
+}
+
+static int
+vvsfs_unlink(struct inode* dir, struct dentry* dentry)
+{
+  struct vvsfs_inode dirdata;
+  struct vvsfs_dir_entry *dent;
+  int num_dirs,error,k;
+
+  struct inode* inode = d_inode(dentry);
+
+  vvsfs_readblock(dir->i_sb,dir->i_ino,&dirdata);
+
+  error = 0;
+  k=0;
+  dent = (struct vvsfs_dir_entry *) &dirdata.data;
+  num_dirs = dirdata.size/sizeof(struct vvsfs_dir_entry);
+  while (!error && k < num_dirs) {
+      printk("vvsfs - unlink, trying, name : %s ino : %d\n",dent->name, dent->inode_number);
+
+      if(dent->inode_number == inode->i_ino){
+          printk("vvsfs - unlink, FOUND IT! %s <-> %s\n", dent->name, dentry->d_iname);
+      }
+
+      k++;
+      dent++;
+  }
+
+  vvsfs_writeblock(dir->i_sb,dir->i_ino,&dirdata);
+
+  /*drop_nlink(inode);*/
+  /*dput(dentry);*/
+
+  return 0;
 }
 
 // vvsfs_file_write - write to a file
@@ -462,6 +495,7 @@ static struct inode_operations vvsfs_dir_inode_operations = {
    create:     vvsfs_create,                   /* create */
    lookup:     vvsfs_lookup,           /* lookup */
    mkdir:      vvsfs_mkdir,         /* mkdir */
+   unlink:     vvsfs_unlink,
 };
 
 // vvsfs_iget - get the inode from the super block

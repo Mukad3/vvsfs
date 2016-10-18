@@ -1,0 +1,6 @@
+#!/bin/tcsh
+
+sudo umount testmountpoint
+sudo rmmod vvsfs
+rm -rf testmountpoint
+echo "=> All Done"

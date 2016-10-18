@@ -1,0 +1,16 @@
+#!/bin/tcsh
+
+echo "=> compiling truncate"
+gcc -o truncate truncate.c
+echo "=> compiling mkfs.vvsfs"
+gcc mkfs.vvsfs.c -o mkfs.vvsfs
+echo "=> make a disk image"
+dd if=/dev/zero of=testvvsfs.img bs=512 count=100
+echo "=> format it"
+./mkfs.vvsfs testvvsfs.img
+echo "=> making mount point"
+mkdir testmountpoint
+echo "=> loading module"
+sudo insmod vvsfs.ko
+echo "=> mount sramfs"
+sudo mount -o loop -t vvsfs testvvsfs.img testmountpoint

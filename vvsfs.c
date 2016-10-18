@@ -334,7 +334,7 @@ vvsfs_unlink(struct inode* dir, struct dentry* dentry)
 {
   struct vvsfs_inode dirdata;
   struct vvsfs_dir_entry *dent;
-  int num_dirs,error,k;
+  int num_dirs,error,k,j;
 
   struct inode* inode = d_inode(dentry);
 
@@ -348,17 +348,30 @@ vvsfs_unlink(struct inode* dir, struct dentry* dentry)
       printk("vvsfs - unlink, trying, name : %s ino : %d\n",dent->name, dent->inode_number);
 
       if(dent->inode_number == inode->i_ino){
-          printk("vvsfs - unlink, FOUND IT! %s <-> %s\n", dent->name, dentry->d_iname);
+          break;
       }
 
       k++;
       dent++;
   }
+  for(j=k;j<num_dirs-1;j++){
+      memcpy(dent,dent+1,sizeof(struct vvsfs_dir_entry));
+      dent->inode_number = (dent+1)->inode_number;
 
+      dent++;
+  }
+  dirdata.size -= sizeof(struct vvsfs_dir_entry);
   vvsfs_writeblock(dir->i_sb,dir->i_ino,&dirdata);
 
-  /*drop_nlink(inode);*/
-  /*dput(dentry);*/
+  //clear inode
+  vvsfs_readblock(dir->i_sb,inode->i_ino,&dirdata);
+  dirdata.size = 0;
+  dirdata.is_directory = false;
+  dirdata.is_empty = true;
+  vvsfs_writeblock(dir->i_sb,inode->i_ino,&dirdata);
+
+  drop_nlink(inode);
+  dput(dentry);
 
   return 0;
 }

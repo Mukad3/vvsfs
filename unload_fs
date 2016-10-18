@@ -1,4 +1,4 @@
-#!/bin/tcsh
+#!/bin/bash
 
 sudo umount testmountpoint
 sudo rmmod vvsfs

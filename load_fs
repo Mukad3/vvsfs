@@ -1,4 +1,4 @@
-#!/bin/tcsh
+#!/bin/bash
 
 echo "=> compiling truncate"
 gcc -o truncate truncate.c

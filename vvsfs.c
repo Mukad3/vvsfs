@@ -496,6 +496,7 @@ static struct inode_operations vvsfs_file_inode_operations = {
 static struct file_operations vvsfs_dir_operations = {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 	.readdir =	vvsfs_readdir,          /* readdir */
+	.setattr =      vvsfs_setattr,
 #else
 	.llseek =	generic_file_llseek,
 	.read	=	generic_read_dir,
@@ -510,6 +511,19 @@ static struct inode_operations vvsfs_dir_inode_operations = {
    mkdir:      vvsfs_mkdir,         /* mkdir */
    unlink:     vvsfs_unlink,
 };
+
+int vvsfs_setattr (struct dentry *dentry, struct iattr *iattr) {
+        struct inode *inode = d_inode (dentry);
+        int error;
+        printk ("setattr is called");
+
+        error = inode_change_ok (inode, iattr);
+        if (error) return error;
+        if (iattr->ia_valid & ATTR_SIZE) truncate_setsize (inode, iattr->ia_size);
+        setattr_copy (inode, iattr);
+        mark_inode_dirty (inode);
+        return 0;
+}
 
 // vvsfs_iget - get the inode from the super block
 struct inode *vvsfs_iget(struct super_block *sb, unsigned long ino)

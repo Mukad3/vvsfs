@@ -7,4 +7,7 @@
 Module.symvers
 modules.order
 .tmp_versions
-
+*.swp
+view.vvsfs
+*.swo
+*test*

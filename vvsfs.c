@@ -261,6 +261,7 @@ struct inode * vvsfs_new_inode(const struct inode * dir, umode_t mode)
   block.mode = (unsigned int)mode;
   block.i_uid = i_uid_read(inode);
   block.i_gid = i_gid_read(inode);
+  block.size = sizeof (block.data) + 3*sizeof (int) + sizeof (uid_t) + sizeof (gid_t) + sizeof (unsigned short);
 //  block.mode = (unsigned int)inode->i_mode;
   //printk ("mode : %i\n", inode->i_mode);
 
@@ -455,6 +456,7 @@ vvsfs_file_write(struct file *filp, const char *buf, size_t count, loff_t *ppos)
   i_gid_write (inode, filedata.i_gid);*/
   printk ("write file -> mode : %i\n", filedata.mode);
   printk ("inode mode : %i\n", inode->i_mode);
+  printk ("file size is : %i\n", inode->i_size);
   inode->i_mode = (umode_t)filedata.mode;
   
   vvsfs_writeblock(sb,inode->i_ino,&filedata);
@@ -597,6 +599,7 @@ struct inode *vvsfs_iget(struct super_block *sb, unsigned long ino)
     vvsfs_readblock(inode->i_sb,inode->i_ino,&filedata);
 
 	inode->i_size = filedata.size;
+	printk ("filesize in iget is : %i\n", filedata.size);
 	// Write the uid and gid to the inode
 	i_uid = filedata.i_uid;
 	i_gid = filedata.i_gid;

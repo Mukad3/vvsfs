@@ -57,6 +57,9 @@
 #include <linux/version.h>
 #include <asm/uaccess.h>
 
+//added later
+#include <linux/quotaops.h>
+
 #include "vvsfs.h"
 
 #define DEBUG 1
@@ -74,6 +77,7 @@ vvsfs_put_super(struct super_block *sb) {
 
 static int 
 vvsfs_statfs(struct dentry *dentry, struct kstatfs *buf) {
+  printk ("statf is called\n");
   if (DEBUG) printk("vvsfs - statfs\n");
 
   buf->f_namelen = MAXNAME;
@@ -104,6 +108,9 @@ vvsfs_writeblock(struct super_block *sb, int inum, struct vvsfs_inode *inode) {
   if (DEBUG) printk("vvsfs - writeblock : %d\n", inum);
 
   bh = sb_bread(sb,inum);
+
+  printk ("writeblock -> uid : %i\n", inode->i_uid);
+
   memcpy(bh->b_data, inode, BLOCKSIZE);
   mark_buffer_dirty(bh);
   sync_dirty_buffer(bh);
@@ -119,6 +126,7 @@ vvsfs_readdir(struct file *filp, void *dirent, filldir_t filldir)
 vvsfs_readdir(struct file *filp, struct dir_context *ctx)
 #endif
 {
+	
 	struct inode *i;
 	struct vvsfs_inode dirdata;
 	int num_dirs;
@@ -133,6 +141,11 @@ vvsfs_readdir(struct file *filp, struct dir_context *ctx)
 	i = file_inode(filp);
 #endif
 	vvsfs_readblock(i->i_sb, i->i_ino, &dirdata);
+
+	//printk ("inode uid in readdir is :%d\n", i_uid_read (i));
+	//dirdata.i_uid = i_uid_read (i);
+	//dirdata.i_gid = i_gid_read (i);
+	//printk ("dirdata in readdir : %d\n", dirdata.i_uid);
 	num_dirs = dirdata.size / sizeof(struct vvsfs_dir_entry);
 
 	if (DEBUG) printk("Number of entries %d fpos %Ld\n", num_dirs, filp->f_pos);
@@ -227,6 +240,7 @@ struct inode * vvsfs_new_inode(const struct inode * dir, umode_t mode)
   /* get an vfs inode */
   inode = new_inode(sb);
   if (!inode) return NULL;
+  inode_init_owner(inode, dir, mode);
  
   /* find a spare inode in the vvsfs */
   newinodenumber = vvsfs_empty_inode(sb);
@@ -234,7 +248,7 @@ struct inode * vvsfs_new_inode(const struct inode * dir, umode_t mode)
     printk("vvsfs - inode table is full.\n");
     return NULL;
   }
-  
+
   block.is_empty = false;
   block.size = 0;
   if(S_ISDIR(mode)){
@@ -243,12 +257,19 @@ struct inode * vvsfs_new_inode(const struct inode * dir, umode_t mode)
   } else {
       block.is_directory = false;
   }
-  
+  block.i_uid = i_uid_read(inode);
+  block.i_gid = i_gid_read(inode);
+  block.mode = inode->i_mode;
+
   vvsfs_writeblock(sb,newinodenumber,&block);
-  
-  inode_init_owner(inode, dir, mode);
+
   inode->i_ino = newinodenumber;
   inode->i_ctime = inode->i_mtime = inode->i_atime = CURRENT_TIME;
+
+  //write to inode ...
+  i_uid_write (inode, block.i_uid);
+  i_gid_write (inode, block.i_gid);
+  inode->i_mode = block.i_mode;
 
   /*printk("vvsfs - inode mode:%d\n", inode->i_mode & S_IFDIR);*/
    
@@ -284,10 +305,11 @@ vvsfs_mknod(struct inode *dir, struct dentry* dentry, umode_t mode)
       inode->i_op = &vvsfs_file_inode_operations;
       inode->i_fop = &vvsfs_file_operations;
   }
-  inode->i_mode = mode;
 
   /* get an vfs inode */
+
   if (!dir) return -1;
+  //inode->i_mode = mode;
 
   vvsfs_readblock(dir->i_sb,dir->i_ino,&dirdata);
 
@@ -299,7 +321,7 @@ vvsfs_mknod(struct inode *dir, struct dentry* dentry, umode_t mode)
   
 
   dirdata.size = (num_dirs + 1) * sizeof(struct vvsfs_dir_entry);
-
+  
   dent->inode_number = inode->i_ino;
   
   vvsfs_writeblock(dir->i_sb,dir->i_ino,&dirdata);
@@ -308,6 +330,7 @@ vvsfs_mknod(struct inode *dir, struct dentry* dentry, umode_t mode)
   dget(dentry);
 
   printk("Node created %ld\n",inode->i_ino);
+  printk ("uid : %d\n", i_uid_read (inode));
 
   //FIXME
   //update_atime(dir);
@@ -424,7 +447,9 @@ vvsfs_file_write(struct file *filp, const char *buf, size_t count, loff_t *ppos)
   buf += count;
 
   inode->i_size = filedata.size;
-
+/*  i_uid_write (inode, filedata.i_uid);
+  i_gid_write (inode, filedata.i_gid);*/
+  
   vvsfs_writeblock(sb,inode->i_ino,&filedata);
   
   if (DEBUG) printk("vvsfs - file write done : %zu ppos %Ld\n",count,*ppos);
@@ -512,6 +537,7 @@ static struct inode_operations vvsfs_dir_inode_operations = {
    unlink:     vvsfs_unlink,
 };
 
+// vvsfs_setattr - setattr function for truncating the files
 int vvsfs_setattr (struct dentry *dentry, struct iattr *iattr) {
         struct inode *inode = d_inode (dentry);
         int error;
@@ -531,6 +557,9 @@ struct inode *vvsfs_iget(struct super_block *sb, unsigned long ino)
     struct inode *inode;
     struct vvsfs_inode filedata; 
 
+    uid_t i_uid;
+    gid_t i_gid;
+
     if (DEBUG) {
         printk("vvsfs - iget - ino : %d", (unsigned int) ino);
         printk(" super %p\n", sb);  
@@ -545,9 +574,16 @@ struct inode *vvsfs_iget(struct super_block *sb, unsigned long ino)
     vvsfs_readblock(inode->i_sb,inode->i_ino,&filedata);
 
 	inode->i_size = filedata.size;
+
+	// Write the uid and gid to the inode
+	i_uid = filedata.i_uid;
+	i_gid = filedata.i_gid;
+
+	printk ("uid : %i\n gid: %i\n", i_uid, i_gid);
  
-//	inode->i_uid = (kuid_t) 0;
-//	inode->i_gid = (kgid_t) 0;
+	i_uid_write (inode, i_uid);
+	i_gid_write (inode, i_gid);
+	printk ("test -----> %i", i_uid);
 
 	inode->i_ctime = inode->i_mtime = inode->i_atime = CURRENT_TIME;
 

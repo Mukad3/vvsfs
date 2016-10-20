@@ -103,6 +103,41 @@ Finally, we use the *encrypt_data* function in our *vvsfs_file_write* and the *d
 or failure of authentication.
 
 ### Testing our VVSFS
-
+1. Removing and truncating files:
+```
+echo "ABCDE" > tmp/test
+cat tmp/test
+>> ABCDE
+truncate -s 2 tmp/test
+cat tmp/test
+>>AB
+```
+2. Create and remove directory
+```
+mkdir tmp/testdir
+touch tmp/testdir/test2
+rmdir tmp/testdir
+mkdir tmp/test2dir2
+rmdir tmp/test2dir2
+```
+3. Storing and modifying permissions
+```
+#unload and load the file system
+touch tmp/test1
+stat tmp/test1
+chmod a-w tmp/test1
+stat tmp/test1
+#unload and load the file system
+stat tmp/test1
+```
+4. Encryption
+```
+# load
+echo "cipher" > tmp/test1
+cat tmp/test1
+./view.vvsfs
+cat tmp/test1
+```
 ### Conclusion
+
 As we have seen, VVSFS is not as simple anymore and maybe a name such as Not a Very Simple File System (NVSFS) will be better suited for our new filesystem.

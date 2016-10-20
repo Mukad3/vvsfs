@@ -117,14 +117,24 @@ cat tmp/test
 mkdir tmp/testdir
 touch tmp/testdir/test2
 rmdir tmp/testdir
+>> rmdir: failed to remove 'tmp/testdir': Directory not empty
 mkdir tmp/test2dir2
 rmdir tmp/test2dir2
+ls tmp
+>> testdir
 ```
 3. Storing and modifying permissions
 ```
 #unload and load the file system
 touch tmp/test1
 stat tmp/test1
+>>  File: 'tmp/test1'
+>>  Size: 0         	Blocks: 0          IO Block: 1024   regular empty file
+>>  Device: 2eh/46d	Inode: 893741552   Links: 1
+>>  Access: (0600/-rw-------)  Uid: (5544352/u5544352)   Gid: ( 9999/ student)
+>>  Access: 2016-10-20 16:19:09.543417297 +1100
+>>  Modify: 2016-10-20 16:19:09.543417297 +1100
+>>  Change: 2016-10-20 16:19:09.543417297 +1100
 chmod a-w tmp/test1
 stat tmp/test1
 #unload and load the file system

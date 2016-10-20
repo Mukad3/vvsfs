@@ -47,7 +47,7 @@ This will provide us with the ability to store the user id, group id, and mode o
 Then we need to update the data while creating/writing into the file and read the data from vvsfs_inode.
 In what follows, we will briefly discuss the steps required to store/retrieve the uid, gid, and mode data. 
 
-1. Creating a new inode: When creating a new inode, we initialise its owner and group by calling the
+Creating a new inode: When creating a new inode, we initialise its owner and group by calling the
 ```inode_init_owner (inode, dir, mode) ``` function. This way, we will be assigning the current user id to our inode.
 However, since we are storing our inodes in out vvsfs_inode structure, we need to assign the values to the corresponding fields of the
 aforementioned structure as following:
@@ -95,4 +95,7 @@ Encryption is done in the *encrypt_data* function. The function copies the infor
 the location passed as its input, retrieves the password and applies a simple XOR function to encrypt/decrypt the data.
 The return value of this function will be stores in one of the addresses _(to)_ passed to the function.
 
+### Testing our VVSFS
 
+### Conclusion
+As we have seen, VVSFS is not as simple anymore and maybe a name such as Not a Very Simple File System (NVSFS) will be better suited for our new filesystem.

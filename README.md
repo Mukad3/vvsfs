@@ -90,3 +90,9 @@ struct inode *vvsfs_iget(struct super_block *sb, unsigned long ino)
 	inode->i_mode = mode;
 	...}
 ```
+### Encryption
+Encryption is done in the *encrypt_data* function. The function copies the information for our file system from
+the location passed as its input, retrieves the password and applies a simple XOR function to encrypt/decrypt the data.
+The return value of this function will be stores in one of the addresses _(to)_ passed to the function.
+
+

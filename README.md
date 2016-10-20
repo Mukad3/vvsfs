@@ -26,4 +26,7 @@ are passed in a structure called  *iattr* and truncating will be done by calling
 - Removing directories: Removing directories will be done by unlinking the inode and the dentry in the *vvsfs_rmdir*
 function. The vvsfs_rmdir function is registered in the *dir_inode_operations* as rmdir.
 
+- Creating directories: Creating directories is done by the *vvsfs_mkdir* directory which is merely calling the *vvsfs_mknod* function/
+*vvsfs_mkdir* is also registered in vvsfs_dir_inode_operations as rmdir.
+
 - 

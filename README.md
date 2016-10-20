@@ -4,7 +4,7 @@ Zhansong Li, Sina Eghbal
 October 2016
 
 ## VVSFS
-VVFSF is a very ver simple file system based on the simplistic RAM filesystem.
+VVFSF is a very very simple file system based on the simplistic RAM filesystem.
 However, the filesystem does not support simple features such as removing directories,
 truncating the files, showing the stat of the files, etc. A series of modifications
 have been done on the VVSFS and certain features have been added to the filesystem which 
@@ -12,17 +12,17 @@ we will discuss in what follows.
 
 ### Features
 - Removing and truncating files: The ability to remove and truncate files have been added to the filesystem.
-This has been done by adding the missing unlink function to the directory operations.
+This was done by adding the missing unlink function to the directory operations.
 ```c
 static int vvsfs_unlink (struct inode *dir, struct dentry *dentry);
 ```
-The above function iterates through the directories and checks whether the directory's name matched
-the name given to be deleted. Once it finds the matching name, it will break from the loop and
+The above function iterates through the directories and checks whether the inode numbers of the files matched
+the inode number given to be deleted. Once it finds the matching file, it will break from the loop and
 shifts the inodes after that one entry to the left.
 - Truncating files: Truncating or shortening the files is done by setting their size in the
 ** setattr ** function. The setattr function is used to set/modify attributes of the inode. The attributes
-are passed in a structure called  *iattr* and truncating will be done by calling truncate_setsize if the value of ATTR_SIZE is true.
-Finally, we mark our inode to dirty so that our changes be recognized by the FS.
+are passed in a structure called  *iattr* and truncating will be done by calling truncate_setsize if the ATTR_SIZE is set in iattr->ia_valid.
+Finally, we mark our inode to dirty so that our changes be written to the image file eventually.
 
 - Removing directories: Removing directories will be done by unlinking the inode and the dentry in the *vvsfs_rmdir*
 function. The vvsfs_rmdir function is registered in the *dir_inode_operations* as rmdir.
@@ -49,18 +49,17 @@ In what follows, we will briefly discuss the steps required to store/retrieve th
 
 Creating a new inode: When creating a new inode, we initialise its owner and group by calling the
 ```inode_init_owner (inode, dir, mode) ``` function. This way, we will be assigning the current user id to our inode.
-However, since we are storing our inodes in out vvsfs_inode structure, we need to assign the values to the corresponding fields of the
+However, since we are storing our inodes in our vvsfs_inode structure, we need to assign the values to the corresponding fields of the
 aforementioned structure as following:
 ```c
 struct inode *vvsfs_new_inode (const struct inode *dir, umode_t umode) { ...
   block.mode = (unsigned int)mode;
   block.i_uid = i_uid_read(inode);
   block.i_gid = i_gid_read(inode);
-  block.size = sizeof (struct vvsfs_inode) - sizeof (char[MAXFILESIZE]) + sizeof (block.data);
   ...}
 ```
 Hence once we store the inode in our blocks, we store the above information in our *vvsfs_inode*.
-Also, we will need to update the inodes whenever we write into a file so we'll add the following lines the the following functions.
+Also, we will need to update the inodes whenever we write into a file so we'll add the following lines to the following functions.
 *vvsfs_mknod*
 ```c
  dirdata.size = (num_dirs + 1) * sizeof(struct vvsfs_dir_entry); 

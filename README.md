@@ -97,6 +97,10 @@ the filesystem will let the users to execute shell scripts.
 ### Encryption
 Encryption is done in the *encrypt_data* function. The function copies the information for our file system from
 the location passed as its input, retrieves the password and applies a simple XOR function to encrypt the data.
+The password is passed through the mount options and stored in the super block.
+```
+mount -o loop,password -t vvsfs imagefile.img mountpoint
+```
 While reading, we use the *decrypt_data* function of our file system is encrypted.
 The above functions will be store theor results in one of the addresses _(to)_ passed to the function.
 Finally, we use the *encrypt_data* function in our *vvsfs_file_write* and the *decrypt_data* in order to decrypt/stop the writing based on the success
@@ -125,28 +129,49 @@ ls tmp
 ```
 3. Storing and modifying permissions
 ```
-#unload and load the file system
-touch tmp/test1
-stat tmp/test1
->>  File: 'tmp/test1'
->>  Size: 0         	Blocks: 0          IO Block: 1024   regular empty file
->>  Device: 2eh/46d	Inode: 893741552   Links: 1
->>  Access: (0600/-rw-------)  Uid: (5544352/u5544352)   Gid: ( 9999/ student)
->>  Access: 2016-10-20 16:19:09.543417297 +1100
->>  Modify: 2016-10-20 16:19:09.543417297 +1100
->>  Change: 2016-10-20 16:19:09.543417297 +1100
-chmod a-w tmp/test1
-stat tmp/test1
-#unload and load the file system
-stat tmp/test1
+sina@sina-MacBookPro:~/Documents/workspace/vvsfs/testmountpoint$ mkdir tmp
+sina@sina-MacBookPro:~/Documents/workspace/vvsfs/testmountpoint$ touch tmp/test1
+sina@sina-MacBookPro:~/Documents/workspace/vvsfs/testmountpoint$ stat tmp/test1
+  File: 'tmp/test1'
+  Size: 0         	Blocks: 0          IO Block: 256    regular empty file
+Device: 700h/1792d	Inode: 2           Links: 1
+Access: (0666/-rw-rw-rw-)  Uid: ( 1000/    sina)   Gid: ( 1000/    sina)
+Access: 2016-10-20 16:26:05.000000000 +1100
+Modify: 2016-10-20 16:26:05.000000000 +1100
+Change: 2016-10-20 16:26:05.000000000 +1100
+ Birth: -
+sina@sina-MacBookPro:~/Documents/workspace/vvsfs/testmountpoint$ chmod a-w tmp/test1
+sina@sina-MacBookPro:~/Documents/workspace/vvsfs/testmountpoint$ stat tmp/test1
+  File: 'tmp/test1'
+  Size: 0         	Blocks: 0          IO Block: 256    regular empty file
+Device: 700h/1792d	Inode: 2           Links: 1
+Access: (0444/-r--r--r--)  Uid: ( 1000/    sina)   Gid: ( 1000/    sina)
+Access: 2016-10-20 16:26:05.000000000 +1100
+Modify: 2016-10-20 16:26:05.000000000 +1100
+Change: 2016-10-20 16:26:39.000000000 +1100
+ Birth: -
+>> unload and load the filesystem
+ sina@sina-MacBookPro:~/Documents/workspace/vvsfs/testmountpoint$ stat tmp/test1
+  File: 'tmp/test1'
+  Size: 0         	Blocks: 0          IO Block: 256    regular empty file
+Device: 700h/1792d	Inode: 2           Links: 1
+Access: (0444/-r--r--r--)  Uid: ( 1000/    sina)   Gid: ( 1000/    sina)
+Access: 2016-10-20 16:26:05.000000000 +1100
+Modify: 2016-10-20 16:26:05.000000000 +1100
+Change: 2016-10-20 16:26:39.000000000 +1100
+ Birth: -
 ```
 4. Encryption
 ```
 # load
-echo "cipher" > tmp/test1
-cat tmp/test1
+mount -o loop,password -t vvsfs testvvsfs.img tmp
+echo "cipher" > tmp/test4
+cat tmp/test4
+>> cipher
 ./view.vvsfs
-cat tmp/test1
+>>
+cat tmp/test4
+>>
 ```
 ### Conclusion
 

@@ -506,7 +506,24 @@ vvsfs_file_read(struct file *filp, char *buf, size_t count, loff_t *ppos)
   return size;
 }
 
-int vvsfs_setattr (struct dentry *dentry, struct iattr *iattr);
+// vvsfs_setattr - setattr function for truncating the files and changing chmod
+int vvsfs_setattr (struct dentry *dentry, struct iattr *iattr) {
+        struct inode *inode = d_inode (dentry);
+        int error;
+	struct vvsfs_inode vvsfs_i;
+
+        error = inode_change_ok (inode, iattr);
+        if (error) return error;
+        if (iattr->ia_valid & ATTR_SIZE) truncate_setsize (inode, iattr->ia_size);
+        setattr_copy (inode, iattr);
+	
+	vvsfs_readblock (inode->i_sb, inode->i_ino, &vvsfs_i);
+	vvsfs_i.mode = (unsigned int)inode->i_mode; 
+	vvsfs_writeblock (inode->i_sb, inode->i_ino, &vvsfs_i);
+        mark_inode_dirty (inode);
+        return 0;
+}
+
 
 static struct file_operations vvsfs_file_operations = {
         read: vvsfs_file_read,        /* read */
@@ -535,24 +552,6 @@ static struct inode_operations vvsfs_dir_inode_operations = {
    mkdir:      vvsfs_mkdir,         /* mkdir */
    unlink:     vvsfs_unlink,        /* unlink */
 };
-
-// vvsfs_setattr - setattr function for truncating the files and changing chmod
-int vvsfs_setattr (struct dentry *dentry, struct iattr *iattr) {
-        struct inode *inode = d_inode (dentry);
-        int error;
-	struct vvsfs_inode vvsfs_i;
-
-        error = inode_change_ok (inode, iattr);
-        if (error) return error;
-        if (iattr->ia_valid & ATTR_SIZE) truncate_setsize (inode, iattr->ia_size);
-        setattr_copy (inode, iattr);
-	
-	vvsfs_readblock (inode->i_sb, inode->i_ino, &vvsfs_i);
-	vvsfs_i.mode = (unsigned int)inode->i_mode; 
-	vvsfs_writeblock (inode->i_sb, inode->i_ino, &vvsfs_i);
-        mark_inode_dirty (inode);
-        return 0;
-}
 
 // vvsfs_iget - get the inode from the super block
 struct inode *vvsfs_iget(struct super_block *sb, unsigned long ino)

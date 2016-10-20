@@ -92,9 +92,12 @@ struct inode *vvsfs_iget(struct super_block *sb, unsigned long ino)
 ```
 ### Encryption
 Encryption is done in the *encrypt_data* function. The function copies the information for our file system from
-the location passed as its input, retrieves the password and applies a simple XOR function to encrypt/decrypt the data.
-The return value of this function will be stores in one of the addresses _(to)_ passed to the function.
-
+the location passed as its input, retrieves the password and applies a simple XOR function to encrypt the data.
+While reading, we use the *decrypt_data* function of our file system is encrypted.
+The above functions will be store theor results in one of the addresses _(to)_ passed to the function.
+Finally, we use the *encrypt_data* function in our *vvsfs_file_write* and the *decrypt_data* in order to decrypt/stop the writing based on the success
+or failure of authentication.
+### 
 ### Testing our VVSFS
 
 ### Conclusion

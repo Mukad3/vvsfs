@@ -261,7 +261,11 @@ struct inode * vvsfs_new_inode(const struct inode * dir, umode_t mode)
   block.mode = (unsigned int)mode;
   block.i_uid = i_uid_read(inode);
   block.i_gid = i_gid_read(inode);
-  block.size = sizeof (block.data) + 3*sizeof (int) + sizeof (uid_t) + sizeof (gid_t) + sizeof (unsigned short);
+// to be tested
+  block.size = sizeof (struct vvsfs_inode) - sizeof (char[MAXFILESIZE]) + sizeof (block.data);
+ // printk ("blocks -> : %i\n", inode->i_blocks);
+//  block.i_blocks = (int)inode->i_blocks;
+	//sizeof (block.data) + 3*sizeof (int) + sizeof (uid_t) + sizeof (gid_t) + sizeof (unsigned short);
 //  block.mode = (unsigned int)inode->i_mode;
   //printk ("mode : %i\n", inode->i_mode);
 
@@ -325,6 +329,7 @@ vvsfs_mknod(struct inode *dir, struct dentry* dentry, umode_t mode)
 
   dirdata.size = (num_dirs + 1) * sizeof(struct vvsfs_dir_entry); 
   dirdata.mode = (unsigned int) mode;
+//  dirdata.blocks = (int) inode->i_blocks;
 
   dent->inode_number = inode->i_ino;
 //  dent->mode = dirdata.mode;
@@ -458,7 +463,8 @@ vvsfs_file_write(struct file *filp, const char *buf, size_t count, loff_t *ppos)
   printk ("inode mode : %i\n", inode->i_mode);
   printk ("file size is : %i\n", inode->i_size);
   inode->i_mode = (umode_t)filedata.mode;
-  
+  inode->i_blocks = (filedata.size / BLOCKSIZE) + 1;
+//  inode->i_blocks = (int)filedata.blocks;  
   vvsfs_writeblock(sb,inode->i_ino,&filedata);
   
   if (DEBUG) printk("vvsfs - file write done : %zu ppos %Ld\n",count,*ppos);
@@ -623,7 +629,8 @@ struct inode *vvsfs_iget(struct super_block *sb, unsigned long ino)
         inode->i_op = &vvsfs_file_inode_operations;
         inode->i_fop = &vvsfs_file_operations;
     }
-
+    	inode->i_blocks = (filedata.size / BLOCKSIZE) + 1;
+	printk ("iblock -> %i\n", inode->i_blocks);
     unlock_new_inode(inode);
     return inode;
 }
@@ -646,9 +653,11 @@ static int vvsfs_fill_super(struct super_block *s, void *data, int silent)
   i->i_ino = 0;
   i->i_flags = 0;
   i->i_mode = S_IRUGO|S_IWUGO|S_IXUGO|S_IFDIR;
+  i->i_size = s->s_count;
   i->i_op = &vvsfs_dir_inode_operations;
   i->i_fop = &vvsfs_dir_operations; 
   printk("inode %p\n", i);
+  inode_init_owner(i, NULL, 755);
 
   hblock = bdev_logical_block_size(s->s_bdev);
   if (hblock > BLOCKSIZE) {

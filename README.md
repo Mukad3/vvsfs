@@ -29,4 +29,17 @@ function. The vvsfs_rmdir function is registered in the *dir_inode_operations* a
 - Creating directories: Creating directories is done by the *vvsfs_mkdir* directory which is merely calling the *vvsfs_mknod* function/
 *vvsfs_mkdir* is also registered in vvsfs_dir_inode_operations as rmdir.
 
-- 
+- Recording the file stats: To record the file stats we initially extended the very simple inode structure of vvsfs.
+Therefore, we add the following entries to our structure.
+```c
+uid_t i_uid;
+gid_t i_gid;
+unsigned short mode;
+```
+Since we have changed the structure, we need to modify our MAXFILESIZE macro by subtracting the size of the variables we are using.
+Hence, our file size will be calculated as follows:
+```c
+#define MAXFILESIZE (BLOCKSIZE - 3*sizeof (int) - sizeof (uid_t) - sizeof (gid_t) - sizeof (unsigned short))
+// Block size - size of all the variables we're using in our structure.
+```
+This will provide us with the ability to store the user id, group id, and mode of our file. 

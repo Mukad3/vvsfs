@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sudo umount testmountpoint
+sudo umount tmp
 sudo rmmod vvsfs
-rm -rf testmountpoint
+rm -rf tmp
 echo "=> All Done"

@@ -1,22 +1,20 @@
 echo "----------"
-echo "short-long" > file1
-cat file1
+echo "hello" > file1
+ls
 echo "----------"
-../truncate file1 5
-cat file1
-echo
+echo "by" > file2
+ls
 echo "----------"
-../truncate file2 3
-od -c file2
+echo "help" > file3
+ls
 echo "----------"
-echo "a" > file3
-od -c file3
+rm file2
+ls
 echo "----------"
-../truncate file3 4
-od -c file3
-echo "----------"
-rm file1
-rm file2 
 rm file3
 ls
+echo "----------"
+rm file1
+ls
+echo "----------"
 

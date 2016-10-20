@@ -266,7 +266,7 @@ struct inode * vvsfs_new_inode(const struct inode * dir, umode_t mode)
   block.mode = (unsigned int)mode;
   block.i_uid = i_uid_read(inode);
   block.i_gid = i_gid_read(inode);
-  block.size = sizeof (struct vvsfs_inode) - sizeof (char[MAXFILESIZE]) + sizeof (block.data);
+  /*block.size = sizeof (struct vvsfs_inode) - sizeof (char[MAXFILESIZE]) + sizeof (block.data);*/
 
   vvsfs_writeblock(sb,newinodenumber,&block);
 
@@ -297,7 +297,7 @@ vvsfs_mknod(struct inode *dir, struct dentry* dentry, umode_t mode)
 
   struct inode * inode;
 
-  if (DEBUG) printk("vvsfs - create : %s\n",dentry->d_name.name);
+  if (DEBUG) printk("vvsfs - mknod: %s\n",dentry->d_name.name);
 
   inode = vvsfs_new_inode(dir,mode);
   if (!inode || IS_ERR (inode)) return -ENOSPC;
@@ -352,6 +352,7 @@ vvsfs_mkdir(struct inode * dir,struct dentry * dentry, umode_t mode)
 {
     return vvsfs_mknod(dir,dentry,S_IRUGO|S_IWUGO|S_IXUGO|S_IFDIR);
 }
+
 // vvsfs_unlink - for removing the files
 static int
 vvsfs_unlink(struct inode* dir, struct dentry* dentry)

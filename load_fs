@@ -5,8 +5,8 @@ gcc -o truncate truncate.c
 echo "=> compiling mkfs.vvsfs"
 gcc mkfs.vvsfs.c -o mkfs.vvsfs
 echo "=> making mount point"
-mkdir testmountpoint
+mkdir tmp
 echo "=> loading module"
 sudo insmod vvsfs.ko
 echo "=> mount sramfs"
-sudo mount -o loop,password -t vvsfs testvvsfs.img testmountpoint
+sudo mount -o loop,password -t vvsfs testvvsfs.img tmp

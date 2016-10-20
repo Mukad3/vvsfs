@@ -1,0 +1,5 @@
+#!/bin/bash
+
+echo "copying file"
+cp ./tmp/test1 ./tmp/test3
+echo "DONE!"

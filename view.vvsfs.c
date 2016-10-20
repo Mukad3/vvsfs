@@ -43,10 +43,12 @@ int main(int argc, char ** argv) {
     if (sizeof(struct vvsfs_inode) != read(device,&inode,sizeof(struct vvsfs_inode))) 
       die("inode read failed");
 
-    printf("%2d : empty : %s dir : %s size : %i data : ", i, 
+    printf("%2d : empty : %s dir : %s size : %i uid : %d gid : %d data : ", i, 
                        (inode.is_empty?"T":"F"), 
                        (inode.is_directory?"T":"F"), 
-                       inode.size);
+                       inode.size,
+			inode.i_uid,
+			inode.i_gid);
 
 
     if (inode.is_directory) {

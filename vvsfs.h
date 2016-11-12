@@ -3,7 +3,7 @@
 #define NUMBLOCKS 100
 #define MAXNAME 15
 
-#define MAXFILESIZE (BLOCKSIZE - 3*sizeof(int) - sizeof(uid_t) - sizeof(gid_t) - sizeof (unsigned short))
+#define MAXFILESIZE (BLOCKSIZE - 3*sizeof(int) - sizeof(uid_t) - sizeof(gid_t) - sizeof (int))
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
@@ -18,8 +18,8 @@ struct vvsfs_inode {
   int size;
   uid_t i_uid;
   gid_t i_gid;
-//  umode_t mode;
-  unsigned short mode;
+  //umode_t mode;
+  int mode;
   char data[MAXFILESIZE];
 };
 

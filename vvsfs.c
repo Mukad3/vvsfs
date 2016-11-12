@@ -53,7 +53,6 @@
 #include <linux/proc_fs.h>
 #include <linux/mm.h>
 #include <linux/slab.h>
-#include <linux/types.h>
 #include <linux/errno.h>
 #include <linux/slab.h>
 #include <linux/init.h>
@@ -63,18 +62,35 @@
 #include <linux/kernel.h>
 #include <linux/version.h>
 #include <asm/uaccess.h>
+#include <linux/types.h>
 
 
 //added later
+#include "vvsfs.h"
 #include <linux/quotaops.h>
 #include <linux/posix_acl_xattr.h>
-#include "vvsfs.h"
 
 #define DEBUG 1
 
 struct vvsfs_info{
     char* password;
 };
+
+
+static inline void print_permission(umode_t mode){
+    printk("vvsfs - File Permissions: \t");
+    printk( (S_ISDIR(mode)) ? "d" : "-");
+    printk( (mode & S_IRUSR) ? "r" : "-");
+    printk( (mode & S_IWUSR) ? "w" : "-");
+    printk( (mode & S_IXUSR) ? "x" : "-");
+    printk( (mode & S_IRGRP) ? "r" : "-");
+    printk( (mode & S_IWGRP) ? "w" : "-");
+    printk( (mode & S_IXGRP) ? "x" : "-");
+    printk( (mode & S_IROTH) ? "r" : "-");
+    printk( (mode & S_IWOTH) ? "w" : "-");
+    printk( (mode & S_IXOTH) ? "x" : "-");
+    printk("\n\n");
+}
 
 static struct inode_operations vvsfs_file_inode_operations;
 static struct file_operations vvsfs_file_operations;
@@ -263,7 +279,9 @@ struct inode * vvsfs_new_inode(const struct inode * dir, umode_t mode)
       block.is_directory = false;
   }
 
-  block.mode = (unsigned int)mode;
+  print_permission(mode);
+
+  block.mode = mode;
   block.i_uid = i_uid_read(inode);
   block.i_gid = i_gid_read(inode);
   /*block.size = sizeof (struct vvsfs_inode) - sizeof (char[MAXFILESIZE]) + sizeof (block.data);*/
@@ -321,7 +339,7 @@ vvsfs_mknod(struct inode *dir, struct dentry* dentry, umode_t mode)
   dent->name[dentry->d_name.len] = '\0';
   
   dirdata.size = (num_dirs + 1) * sizeof(struct vvsfs_dir_entry); 
-  dirdata.mode = (unsigned int) mode;
+  /*dirdata.mode = mode;*/
 
   dent->inode_number = inode->i_ino;
 
@@ -381,7 +399,7 @@ vvsfs_unlink(struct inode* dir, struct dentry* dentry)
   }
   // if the entry was not found
   if (k == num_dirs) return -ENOENT;
-  if (S_ISDIR (inode->i_mode)) return -EIO;
+  /*if (S_ISDIR (inode->i_mode)) return -EIO;*/
   for(j=k;j<num_dirs-1;j++){
       memcpy(dent,dent+1,sizeof(struct vvsfs_dir_entry));
       dent->inode_number = (dent+1)->inode_number;
@@ -407,13 +425,17 @@ vvsfs_unlink(struct inode* dir, struct dentry* dentry)
 static int
 vvsfs_rmdir(struct inode * dir,struct dentry * dentry)
 {
+    int ret;
+
     if(!simple_empty(dentry))
         return -ENOTEMPTY;
 
     drop_nlink(d_inode(dentry));
-    vvsfs_unlink(dir,dentry);
-    drop_nlink(dir);
-    return 0;
+    ret = vvsfs_unlink(dir,dentry);
+    if(ret == 0)
+        drop_nlink(dir);
+
+    return ret;
 }
 
 
@@ -575,22 +597,23 @@ vvsfs_file_read(struct file *filp, char *buf, size_t count, loff_t *ppos)
 
 // vvsfs_setattr - setattr function for truncating the files and changing chmod
 int vvsfs_setattr (struct dentry *dentry, struct iattr *iattr) {
-        struct inode *inode = d_inode (dentry);
-        int error;
-	struct vvsfs_inode vvsfs_i;
+    struct inode *inode = d_inode (dentry);
+    int error;
+    struct vvsfs_inode vvsfs_i;
 
-        error = inode_change_ok (inode, iattr);
-        if (error) return error;
-        if (iattr->ia_valid & ATTR_SIZE) truncate_setsize (inode, iattr->ia_size);
-        setattr_copy (inode, iattr);
-	
-	vvsfs_readblock (inode->i_sb, inode->i_ino, &vvsfs_i);
-	vvsfs_i.mode = (unsigned int)inode->i_mode; 
-	vvsfs_writeblock (inode->i_sb, inode->i_ino, &vvsfs_i);
-        mark_inode_dirty (inode);
-        return 0;
+    error = inode_change_ok (inode, iattr);
+    if (error) return error;
+    if (iattr->ia_valid & ATTR_SIZE) truncate_setsize (inode, iattr->ia_size);
+    setattr_copy (inode, iattr);
+
+    vvsfs_readblock (inode->i_sb, inode->i_ino, &vvsfs_i);
+    vvsfs_i.mode = inode->i_mode; 
+    vvsfs_i.i_uid = i_uid_read(inode);
+    vvsfs_i.i_gid = i_gid_read(inode);
+    vvsfs_writeblock (inode->i_sb, inode->i_ino, &vvsfs_i);
+    mark_inode_dirty (inode);
+    return 0;
 }
-
 
 static struct file_operations vvsfs_file_operations = {
         read: vvsfs_file_read,        /* read */
@@ -604,7 +627,7 @@ static struct inode_operations vvsfs_file_inode_operations = {
 static struct file_operations vvsfs_dir_operations = {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 	.readdir =	vvsfs_readdir,          /* readdir */
-	.setattr =      vvsfs_setattr,          /* setattr */
+	.setattr =  vvsfs_setattr,          /* setattr */
 #else
 	.llseek =	generic_file_llseek,
 	.read	=	generic_read_dir,
@@ -648,7 +671,12 @@ struct inode *vvsfs_iget(struct super_block *sb, unsigned long ino)
 	// Write the uid and gid to the inode
 	i_uid = filedata.i_uid;
 	i_gid = filedata.i_gid;
-	mode = (umode_t)filedata.mode;
+    mode = (umode_t)filedata.mode;
+
+    print_permission(mode);
+
+    /*if(filedata.is_directory)*/
+        /*mode |= S_IFDIR;*/
 
 	i_uid_write (inode, i_uid);
 	i_gid_write (inode, i_gid);

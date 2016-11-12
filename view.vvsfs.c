@@ -6,11 +6,12 @@
  *   gcc view.vvsfs.c -o view.vvsfs
  */
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
-#include <sys/types.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include "vvsfs.h"
 
@@ -43,12 +44,13 @@ int main(int argc, char ** argv) {
     if (sizeof(struct vvsfs_inode) != read(device,&inode,sizeof(struct vvsfs_inode))) 
       die("inode read failed");
 
-    printf("%2d : empty : %s dir : %s size : %i uid : %d gid : %d data : ", i, 
+    printf("%2d : empty : %s dir : %s size : %i uid : %d gid : %d S_ISDIR %d data : ", i, 
                        (inode.is_empty?"T":"F"), 
                        (inode.is_directory?"T":"F"), 
                        inode.size,
 			inode.i_uid,
-			inode.i_gid);
+			inode.i_gid,
+            S_ISDIR(inode.mode));
 
 
     if (inode.is_directory) {
